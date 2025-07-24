@@ -1,12 +1,11 @@
 import os
 import typer
-
 import fnmatch
 from pathlib import Path
 from typing import List, Optional
 from typing_extensions import Annotated
 
-# --- Configuración ---
+# --- Configuration ---
 CONTEXT_DIR_NAME = ".code2context"
 CONTEXT_DIR = Path(CONTEXT_DIR_NAME)
 PATHS_FILE = CONTEXT_DIR / "file_paths.txt"
@@ -15,11 +14,11 @@ OUTPUT_FILE = CONTEXT_DIR / "context.txt"
 PROJECT_ROOT_FILE = CONTEXT_DIR / "project_root.txt"
 
 app = typer.Typer(
-    help="Herramienta CLI para empaquetar archivos de texto de un proyecto en un contexto para LLMs."
+    help="CLI tool to package text files from a project into a context for LLMs."
 )
 
 DEFAULT_IGNORE_PATTERNS = [
-    "# Añade patrones para ignorar archivos o directorios, uno por línea.",
+    "# Add patterns to ignore files or directories, one per line.",
     ".git", ".vscode", "__pycache__", ".env", "node_modules",
     ".DS_Store", "*.pyc", "*.log", CONTEXT_DIR_NAME,
     "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.svg", "*.ico",
@@ -37,21 +36,21 @@ LANGUAGE_MAP = {
     '.txt': 'text', '.sql': 'sql', '.php': 'php', '.xml': 'xml'
 }
 
-@app.command(help="Explora un directorio y guarda la lista de todos los archivos encontrados.")
+@app.command(help="Explore a directory and save the list of all found files.")
 def explore(
     path: Annotated[Path, typer.Argument(
-        help="La ruta al directorio del proyecto que quieres explorar.",
+        help="The path to the project directory you want to explore.",
         exists=True, file_okay=False, readable=True, resolve_path=True,
     )]
 ):
-    typer.echo(f"🔍 Explorando el directorio: {path}")
-    typer.echo("🎯 Buscando todos los archivos para su posterior filtrado...")
+    typer.echo(f"🔍 Exploring directory: {path}")
+    typer.echo("🎯 Finding all files for later filtering...")
     CONTEXT_DIR.mkdir(exist_ok=True)
     with open(PROJECT_ROOT_FILE, 'w', encoding="utf-8") as f:
         f.write(str(path))
     all_files = []
     for root, _, files in os.walk(path):
-        # Ignorar el propio directorio de contexto
+        # Ignore the context directory itself
         if CONTEXT_DIR_NAME in Path(root).parts:
             continue
         for name in files:
@@ -62,31 +61,31 @@ def explore(
         for file_path in sorted(all_files):
             f.write(f"{file_path}\n")
             
-    typer.secho(f"✅ Se encontraron y guardaron {len(all_files)} rutas de archivos en '{PATHS_FILE}'", fg=typer.colors.GREEN)
+    typer.secho(f"✅ Found and saved {len(all_files)} file paths in '{PATHS_FILE}'", fg=typer.colors.GREEN)
     
     if not IGNORE_FILE.exists():
         with open(IGNORE_FILE, 'w', encoding="utf-8") as f:
             f.write("\n".join(DEFAULT_IGNORE_PATTERNS))
-        typer.echo(f"📄 Se ha creado un archivo de ignorados por defecto en '{IGNORE_FILE}'.")
+        typer.echo(f"📄 A default ignore file has been created at '{IGNORE_FILE}'.")
 
-@app.command(help="Lee, filtra y empaqueta archivos en un 'context.txt' optimizado para LLMs.")
+@app.command(help="Read, filter, and package files into a 'context.txt' optimized for LLMs.")
 def scan(
     project_name: Annotated[str, typer.Option(
-        "--name", "-n", help="El nombre del proyecto para el encabezado."
-    )] = "Proyecto sin Nombre",
+        "--name", "-n", help="The name of the project for the header."
+    )] = "Unnamed Project",
     summary: Annotated[str, typer.Option(
-        "--summary", "-s", help="Un breve resumen del objetivo del proyecto."
-    )] = "No se ha proporcionado un resumen del proyecto."
+        "--summary", "-s", help="A brief summary of the project's goal."
+    )] = "No project summary provided."
 ):
-    typer.echo("🚀 Iniciando el escaneo optimizado de archivos...")
+    typer.echo("🚀 Starting optimized file scan...")
     required_files = [CONTEXT_DIR, PATHS_FILE, PROJECT_ROOT_FILE]
     if not all(f.exists() for f in required_files):
-        typer.secho("Error: Faltan archivos de configuración. Ejecuta 'explore' primero.", fg=typer.colors.RED)
+        typer.secho("Error: Configuration files are missing. Run 'explore' first.", fg=typer.colors.RED)
         raise typer.Exit(code=1)
 
     with open(PROJECT_ROOT_FILE, 'r', encoding="utf-8") as f:
         project_root = Path(f.read().strip())
-    typer.echo(f"📂 Usando la raíz del proyecto: {project_root}")
+    typer.echo(f"📂 Using project root: {project_root}")
     
     with open(PATHS_FILE, 'r', encoding="utf-8") as f:
         candidate_files = [line.strip() for line in f.readlines()]
@@ -94,7 +93,7 @@ def scan(
     raw_ignored_patterns = set()
     if IGNORE_FILE.exists():
         with open(IGNORE_FILE, 'r', encoding="utf-8") as f:
-            # Normalizamos a forward slashes y quitamos las que estén al final
+            # Normalize to forward slashes and remove any trailing slashes
             raw_ignored_patterns = {
                 line.strip().replace("\\", "/").rstrip('/') 
                 for line in f if line.strip() and not line.strip().startswith('#')
@@ -118,12 +117,12 @@ def scan(
             included_files_relative.append(relative_path)
             
     final_context = [
-        f"# Contexto del Proyecto: {project_name}\n\n",
-        f"## Objetivo del Proyecto\n\n{summary}\n\n",
-        "## Estructura de Directorios\n\n",
+        f"# Project Context: {project_name}\n\n",
+        f"## Project Goal\n\n{summary}\n\n",
+        "## Directory Structure\n\n",
         f"```\n{generate_directory_tree(project_root.name, included_files_relative)}\n```\n\n",
-        "## Contenido de los Archivos\n\n",
-        "A continuación se muestra el contenido de cada archivo de texto relevante del proyecto.\n"
+        "## File Contents\n\n",
+        "The content of each relevant text file in the project is shown below.\n"
     ]
 
     files_processed = 0
@@ -131,32 +130,32 @@ def scan(
         absolute_path = project_root / relative_path
         
         if not absolute_path.exists():
-            typer.secho(f"❓ Archivo no encontrado (probablemente fue borrado después de 'explore'): {relative_path}", fg=typer.colors.YELLOW)
+            typer.secho(f"❓ File not found (it was likely deleted after 'explore'): {relative_path}", fg=typer.colors.YELLOW)
             continue
         
         try:
             with open(absolute_path, 'r', encoding="utf-8") as f:
                 content = f.read()
             
-            typer.echo(f"📄 Procesando: {relative_path}")
+            typer.echo(f"📄 Processing: {relative_path}")
             lang = LANGUAGE_MAP.get(relative_path.suffix, 'text')
             file_block = ["\n---\n\n", f"### `{relative_path}`\n\n", f"```{lang}\n", content, "\n```\n"]
             final_context.extend(file_block)
             files_processed += 1
         except UnicodeDecodeError:
-            typer.secho(f"🙈 Ignorando archivo no-texto (binario): {relative_path}", fg=typer.colors.YELLOW)
+            typer.secho(f"🙈 Ignoring non-text (binary) file: {relative_path}", fg=typer.colors.YELLOW)
         except Exception as e:
-            typer.secho(f"❌ Error leyendo el archivo {relative_path}: {e}", fg=typer.colors.RED)
+            typer.secho(f"❌ Error reading file {relative_path}: {e}", fg=typer.colors.RED)
 
     with open(OUTPUT_FILE, 'w', encoding="utf-8") as f:
         f.write("".join(final_context))
-    typer.secho(f"\n✨ ¡Éxito! Se procesaron {files_processed} archivos de texto. Contexto guardado en '{OUTPUT_FILE}'.",
+    typer.secho(f"\n✨ Success! Processed {files_processed} text files. Context saved to '{OUTPUT_FILE}'.",
                 fg=typer.colors.BRIGHT_GREEN, bold=True)
 
 
 def generate_directory_tree(project_root_name: str, paths: list[Path]) -> str:
     if not paths:
-        return "El proyecto está vacío o todos los archivos fueron ignorados/filtrados."
+        return "The project is empty or all files were ignored/filtered."
     tree = {}
     for path in paths:
         current_level = tree
