@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code2context"            
+version = "0.1.0"                   
+authors = [
+  { name="Tu Nombre", email="eduardovalenzuelaparga@gmail.com" },
+]
+description = "Una herramienta CLI para empaquetar archivos de un proyecto en un contexto para LLMs."
+readme = "README.md"                
+requires-python = ">=3.8"           
+keywords = ["cli", "llm", "context", "developer-tools", "typer"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+
+dependencies = [
+    "typer[all]>=0.9.0",
+    "typing-extensions>=4.0.0"
+]
+
+[project.scripts]
+c2c = "code2context.cli:app"
+code2context = "code2context.cli:app"
+
+# (Opcional) URLs útiles que aparecerán en PyPI.
+[project.urls]
+Homepage = "https://github.com/EduardoVparga/code2context"
+"Bug Tracker" = "https://github.com/EduardoVparga/code2context/issues"
